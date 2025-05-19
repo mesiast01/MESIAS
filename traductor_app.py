@@ -5,10 +5,14 @@ st.set_page_config(page_title="Traductor Awajún/Wampis", layout="centered")
 
 st.title("📘 Traductor INKAJU: Awajún / Wampis – Español")
 
-# Cargar el archivo CSV
+# Cargar el archivo CSV y limpiar
 @st.cache_data
 def cargar_diccionario():
-    return pd.read_csv("diccionario.csv")
+    df = pd.read_csv("diccionario.csv", encoding="utf-8")
+    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+    df = df.dropna(subset=["espanol"])  # Asegura que la columna 'espanol' no esté vacía
+    df = df.drop_duplicates(subset=["espanol", "awajun", "wampis"], keep="last")
+    return df
 
 df = cargar_diccionario()
 
@@ -27,8 +31,11 @@ else:
 # Buscar traducción
 if texto:
     coincidencias = df[df[origen].str.lower() == texto.lower()]
+    # Filtrar si el resultado está vacío o es NaN
+    coincidencias = coincidencias[coincidencias[destino].notnull()]
+    
     if not coincidencias.empty:
         resultado = coincidencias.iloc[0][destino]
         st.success(f'**{texto}** → **{resultado}**')
     else:
-        st.error("❌ Palabra no encontrada en el diccionario.")
+        st.error("❌ Palabra no encontrada en el diccionario o traducción incompleta.")
